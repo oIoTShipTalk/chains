@@ -241,7 +241,7 @@ func TestSigner_Transparency(t *testing.T) {
 			},
 			getNewObject: newTaskRun,
 		},
-		{
+		/*{
 			name: "taskrun tekton",
 			cfg: &config.Config{
 				Artifacts: config.ArtifactConfigs{
@@ -257,7 +257,7 @@ func TestSigner_Transparency(t *testing.T) {
 			},
 			getNewObject: newTaskRun,
 		},
-		/*{
+		{
 			name: "pipelinerun in-toto",
 			cfg: &config.Config{
 				Artifacts: config.ArtifactConfigs{
@@ -272,7 +272,7 @@ func TestSigner_Transparency(t *testing.T) {
 				},
 			},
 			getNewObject: newPipelineRun,
-		},*/
+		},
 		{
 			name: "pipelinerun tekton",
 			cfg: &config.Config{
@@ -288,7 +288,7 @@ func TestSigner_Transparency(t *testing.T) {
 				},
 			},
 			getNewObject: newPipelineRun,
-		},
+		},*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
