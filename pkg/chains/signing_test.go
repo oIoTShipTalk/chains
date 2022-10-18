@@ -39,7 +39,7 @@ func TestSigner_Sign(t *testing.T) {
 	// Sign does three main things:
 	// - generates payloads
 	// - stores them in the configured systems
-	// - marks the object as signed
+	//  - marks the object as signed
 	tro := objects.NewTaskRunObject(&v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
