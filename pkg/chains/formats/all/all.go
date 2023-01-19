@@ -17,5 +17,4 @@ package all
 import (
 	_ "github.com/tektoncd/chains/pkg/chains/formats/intotoite6"
 	_ "github.com/tektoncd/chains/pkg/chains/formats/simple"
-	_ "github.com/tektoncd/chains/pkg/chains/formats/tekton"
 )

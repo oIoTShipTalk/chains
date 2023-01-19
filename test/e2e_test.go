@@ -63,6 +63,74 @@ func TestInstall(t *testing.T) {
 	}
 }
 
+func TestVaultKMSSpire(t *testing.T) {
+	ctx := logtesting.TestContextWithLogger(t)
+	c, ns, cleanup := setup(ctx, t, setupOpts{})
+	t.Cleanup(cleanup)
+
+	resetConfig := setConfigMap(ctx, t, c, map[string]string{
+		"artifacts.oci.signer":            "kms",
+		"artifacts.taskrun.signer":        "kms",
+		"artifacts.taskrun.format":        "in-toto",
+		"artifacts.taskrun.storage":       "tekton",
+		"signers.kms.kmsref":              "hashivault://e2e",
+		"signers.kms.auth.address":        "http://vault.vault:8200",
+		"signers.kms.auth.oidc.path":      "jwt",
+		"signers.kms.auth.oidc.role":      "spire-chains-controller",
+		"signers.kms.auth.spire.sock":     "unix:///tmp/spire-agent/public/api.sock",
+		"signers.kms.auth.spire.audience": "e2e",
+	})
+
+	t.Cleanup(resetConfig)
+	time.Sleep(3 * time.Second) // https://github.com/tektoncd/chains/issues/664
+
+	tro := getTaskRunObject(ns)
+	createdTro := tekton.CreateObject(t, ctx, c.PipelineClient, tro)
+
+	// Give it a minute to complete.
+	waitForCondition(ctx, t, c.PipelineClient, createdTro, done, time.Minute)
+
+	// It can take up to a minute for the secret data to be updated!
+	obj := waitForCondition(ctx, t, c.PipelineClient, createdTro, signed, 2*time.Minute)
+	t.Log(obj.GetAnnotations())
+
+	// Verify the payload signature.
+	verifySignature(ctx, t, c, obj) // TODO: consider removing
+
+	// verify the cert against the signature and payload
+	sigKey := fmt.Sprintf("chains.tekton.dev/signature-taskrun-%s", obj.GetUID())
+	payloadKey := fmt.Sprintf("chains.tekton.dev/payload-taskrun-%s", obj.GetUID())
+	sigBytes := base64Decode(t, obj.GetAnnotations()[sigKey])
+	payloadBytes := base64Decode(t, obj.GetAnnotations()[payloadKey])
+
+	certPEM, err := os.ReadFile("testdata/vault.pub")
+	if err != nil {
+		t.Fatalf("failed reading vault.pub key: %v", err)
+	}
+	cert, err := cryptoutils.UnmarshalPEMToPublicKey(certPEM)
+	if err != nil {
+		t.Fatalf("failed unmarshaling vault.pub key: %v", err)
+	}
+	pubKey, err := signature.LoadECDSAVerifier(cert.(*ecdsa.PublicKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify the signature
+	if err := pubKey.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader(payloadBytes)); err != nil {
+		log.Println("============================")
+		log.Println(sigBytes)
+		log.Println("============================")
+		log.Println(payloadBytes)
+		log.Println("============================")
+		log.Println(string(sigBytes))
+		log.Println("============================")
+		log.Println(string(payloadBytes))
+		log.Println("============================")
+		t.Fatal(err)
+	}
+}
+
 func TestTektonStorage(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -72,7 +140,7 @@ func TestTektonStorage(t *testing.T) {
 		{
 			name: "taskrun",
 			cm: map[string]string{
-				"artifacts.taskrun.format":  "tekton",
+				"artifacts.taskrun.format":  "in-toto",
 				"artifacts.taskrun.signer":  "x509",
 				"artifacts.taskrun.storage": "tekton",
 				"artifacts.oci.format":      "simplesigning",
@@ -84,7 +152,7 @@ func TestTektonStorage(t *testing.T) {
 		{
 			name: "pipelinerun",
 			cm: map[string]string{
-				"artifacts.pipelinerun.format":  "tekton",
+				"artifacts.pipelinerun.format":  "in-toto",
 				"artifacts.pipelinerun.signer":  "x509",
 				"artifacts.pipelinerun.storage": "tekton",
 				"artifacts.oci.format":          "simplesigning",
@@ -133,7 +201,7 @@ func TestRekor(t *testing.T) {
 		{
 			name: "taskrun",
 			cm: map[string]string{
-				"artifacts.taskrun.format":  "tekton",
+				"artifacts.taskrun.format":  "in-toto",
 				"artifacts.taskrun.signer":  "x509",
 				"artifacts.taskrun.storage": "tekton",
 				"artifacts.oci.format":      "simplesigning",
@@ -146,7 +214,7 @@ func TestRekor(t *testing.T) {
 		{
 			name: "pipelinerun",
 			cm: map[string]string{
-				"artifacts.pipelinerun.format":  "tekton",
+				"artifacts.pipelinerun.format":  "in-toto",
 				"artifacts.pipelinerun.signer":  "x509",
 				"artifacts.pipelinerun.storage": "tekton",
 				"artifacts.oci.format":          "simplesigning",
@@ -213,7 +281,7 @@ func TestOCISigning(t *testing.T) {
 			t.Cleanup(cleanup)
 
 			// Setup the right config.
-			resetConfig := setConfigMap(ctx, t, c, map[string]string{"artifacts.oci.storage": "tekton", "artifacts.taskrun.format": "tekton"})
+			resetConfig := setConfigMap(ctx, t, c, map[string]string{"artifacts.oci.storage": "tekton", "artifacts.taskrun.format": "in-toto"})
 			t.Cleanup(resetConfig)
 
 			tro := getTaskRunObject(ns)
@@ -793,62 +861,5 @@ func TestProvenanceMaterials(t *testing.T) {
 				t.Fatal(string(d))
 			}
 		})
-	}
-}
-
-func TestVaultKMSSpire(t *testing.T) {
-	ctx := logtesting.TestContextWithLogger(t)
-	c, ns, cleanup := setup(ctx, t, setupOpts{})
-	t.Cleanup(cleanup)
-
-	resetConfig := setConfigMap(ctx, t, c, map[string]string{
-		"artifacts.oci.signer":            "kms",
-		"artifacts.taskrun.signer":        "kms",
-		"signers.kms.kmsref":              "hashivault://e2e",
-		"signers.kms.auth.address":        "http://vault.vault:8200",
-		"signers.kms.auth.oidc.path":      "jwt",
-		"signers.kms.auth.oidc.role":      "spire-chains-controller",
-		"signers.kms.auth.spire.sock":     "unix:///tmp/spire-agent/public/api.sock",
-		"signers.kms.auth.spire.audience": "e2e",
-	})
-
-	t.Cleanup(resetConfig)
-	time.Sleep(3 * time.Second) // https://github.com/tektoncd/chains/issues/664
-
-	tro := getTaskRunObject(ns)
-	createdTro := tekton.CreateObject(t, ctx, c.PipelineClient, tro)
-
-	// Give it a minute to complete.
-	waitForCondition(ctx, t, c.PipelineClient, createdTro, done, time.Minute)
-
-	// It can take up to a minute for the secret data to be updated!
-	obj := waitForCondition(ctx, t, c.PipelineClient, createdTro, signed, 2*time.Minute)
-	t.Log(obj.GetAnnotations())
-
-	// Verify the payload signature.
-	verifySignature(ctx, t, c, obj) // TODO: consider removing
-
-	// verify the cert against the signature and payload
-	sigKey := fmt.Sprintf("chains.tekton.dev/signature-taskrun-%s", obj.GetUID())
-	payloadKey := fmt.Sprintf("chains.tekton.dev/payload-taskrun-%s", obj.GetUID())
-	sigBytes := base64Decode(t, obj.GetAnnotations()[sigKey])
-	payloadBytes := base64Decode(t, obj.GetAnnotations()[payloadKey])
-
-	certPEM, err := os.ReadFile("testdata/vault.pub")
-	if err != nil {
-		t.Fatalf("failed reading vault.pub key: %v", err)
-	}
-	cert, err := cryptoutils.UnmarshalPEMToPublicKey(certPEM)
-	if err != nil {
-		t.Fatalf("failed unmarshaling vault.pub key: %v", err)
-	}
-	pubKey, err := signature.LoadECDSAVerifier(cert.(*ecdsa.PublicKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// verify the signature
-	if err := pubKey.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader(payloadBytes)); err != nil {
-		t.Fatal(err)
 	}
 }
