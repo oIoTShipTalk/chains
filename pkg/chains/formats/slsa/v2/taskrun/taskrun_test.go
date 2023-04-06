@@ -34,7 +34,6 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -230,13 +229,6 @@ func TestGetSubjectDigests(t *testing.T) {
 					{
 						PipelineResourceBinding: v1beta1.PipelineResourceBinding{
 							Name: "nil-check",
-						},
-					}, {
-						PipelineResourceBinding: v1beta1.PipelineResourceBinding{
-							Name: "built-image",
-							ResourceSpec: &v1alpha1.PipelineResourceSpec{
-								Type: v1alpha1.PipelineResourceTypeImage,
-							},
 						},
 					},
 				},

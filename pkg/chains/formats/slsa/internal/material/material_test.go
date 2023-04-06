@@ -28,7 +28,6 @@ import (
 	"github.com/tektoncd/chains/pkg/artifacts"
 	"github.com/tektoncd/chains/pkg/chains/objects"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
@@ -88,16 +87,6 @@ func TestMaterials(t *testing.T) {
 						{
 							PipelineResourceBinding: v1beta1.PipelineResourceBinding{
 								Name: "nil-resource-spec",
-							},
-						}, {
-							PipelineResourceBinding: v1beta1.PipelineResourceBinding{
-								Name: "repo",
-								ResourceSpec: &v1alpha1.PipelineResourceSpec{
-									Params: []v1alpha1.ResourceParam{
-										{Name: "url", Value: "https://github.com/GoogleContainerTools/distroless"},
-									},
-									Type: v1alpha1.PipelineResourceTypeGit,
-								},
 							},
 						},
 					},

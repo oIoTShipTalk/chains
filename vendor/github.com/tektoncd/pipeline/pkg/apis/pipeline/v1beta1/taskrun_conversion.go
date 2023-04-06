@@ -41,9 +41,6 @@ func (tr *TaskRun) ConvertTo(ctx context.Context, to apis.Convertible) error {
 	switch sink := to.(type) {
 	case *v1.TaskRun:
 		sink.ObjectMeta = tr.ObjectMeta
-		if err := serializeTaskRunResources(&sink.ObjectMeta, &tr.Spec); err != nil {
-			return err
-		}
 		if err := serializeTaskRunCloudEvents(&sink.ObjectMeta, &tr.Status); err != nil {
 			return err
 		}
@@ -64,6 +61,10 @@ func (trs *TaskRunSpec) ConvertTo(ctx context.Context, sink *v1.TaskRunSpec) err
 	if trs.Debug != nil {
 		sink.Debug = &v1.TaskRunDebug{}
 		trs.Debug.convertTo(ctx, sink.Debug)
+	}
+	if trs.Artifacts != nil {
+		sink.Artifacts = &v1.Artifacts{}
+		trs.Artifacts.convertTo(ctx, sink.Artifacts)
 	}
 	sink.Params = nil
 	for _, p := range trs.Params {
@@ -118,9 +119,6 @@ func (tr *TaskRun) ConvertFrom(ctx context.Context, from apis.Convertible) error
 	switch source := from.(type) {
 	case *v1.TaskRun:
 		tr.ObjectMeta = source.ObjectMeta
-		if err := deserializeTaskRunResources(&tr.ObjectMeta, &tr.Spec); err != nil {
-			return err
-		}
 		if err := deserializeTaskRunCloudEvents(&tr.ObjectMeta, &tr.Status); err != nil {
 			return err
 		}
@@ -142,6 +140,11 @@ func (trs *TaskRunSpec) ConvertFrom(ctx context.Context, source *v1.TaskRunSpec)
 		newDebug := TaskRunDebug{}
 		newDebug.convertFrom(ctx, *source.Debug)
 		trs.Debug = &newDebug
+	}
+	if source.Artifacts != nil {
+		newArtifacts := Artifacts{}
+		newArtifacts.convertFrom(ctx, source.Artifacts)
+		trs.Artifacts = &newArtifacts
 	}
 	trs.Params = nil
 	for _, p := range source.Params {
@@ -245,6 +248,11 @@ func (trs *TaskRunStatus) ConvertTo(ctx context.Context, sink *v1.TaskRunStatus)
 		trr.convertTo(ctx, &new)
 		sink.Results = append(sink.Results, new)
 	}
+
+	if trs.Artifacts != nil {
+		sink.Artifacts = &v1.Artifacts{}
+		trs.Artifacts.convertTo(ctx, sink.Artifacts)
+	}
 	sink.Sidecars = nil
 	for _, sc := range trs.Sidecars {
 		new := v1.SidecarState{}
@@ -293,6 +301,11 @@ func (trs *TaskRunStatus) ConvertFrom(ctx context.Context, source v1.TaskRunStat
 		new := TaskRunResult{}
 		new.convertFrom(ctx, trr)
 		trs.TaskRunResults = append(trs.TaskRunResults, new)
+	}
+	if source.Artifacts != nil {
+		newArtifacts := Artifacts{}
+		newArtifacts.convertFrom(ctx, source.Artifacts)
+		trs.Artifacts = &newArtifacts
 	}
 	trs.Sidecars = nil
 	for _, sc := range source.Sidecars {
@@ -358,25 +371,6 @@ func (ss *SidecarState) convertFrom(ctx context.Context, source v1.SidecarState)
 	ss.Name = source.Name
 	ss.ContainerName = source.Container
 	ss.ImageID = source.ImageID
-}
-
-func serializeTaskRunResources(meta *metav1.ObjectMeta, spec *TaskRunSpec) error {
-	if spec.Resources == nil {
-		return nil
-	}
-	return version.SerializeToMetadata(meta, spec.Resources, resourcesAnnotationKey)
-}
-
-func deserializeTaskRunResources(meta *metav1.ObjectMeta, spec *TaskRunSpec) error {
-	resources := &TaskRunResources{}
-	err := version.DeserializeFromMetadata(meta, resources, resourcesAnnotationKey)
-	if err != nil {
-		return err
-	}
-	if resources.Inputs != nil || resources.Outputs != nil {
-		spec.Resources = resources
-	}
-	return nil
 }
 
 func serializeTaskRunCloudEvents(meta *metav1.ObjectMeta, status *TaskRunStatus) error {

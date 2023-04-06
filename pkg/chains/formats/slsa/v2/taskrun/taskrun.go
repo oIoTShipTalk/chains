@@ -16,6 +16,7 @@ package taskrun
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -45,6 +46,9 @@ func GenerateAttestation(builderID string, payloadType config.PayloadType, tro *
 	if err != nil {
 		return nil, err
 	}
+	log.Println("ARTIFACTSSS")
+	log.Println(tro.Status.Artifacts)
+	log.Println("ARTIFACTSSS")
 	att := intoto.ProvenanceStatement{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,

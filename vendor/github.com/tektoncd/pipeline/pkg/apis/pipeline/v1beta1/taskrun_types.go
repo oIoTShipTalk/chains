@@ -40,9 +40,8 @@ type TaskRunSpec struct {
 	Debug *TaskRunDebug `json:"debug,omitempty"`
 	// +optional
 	// +listType=atomic
-	Params []Param `json:"params,omitempty"`
-	// +optional
-	Resources *TaskRunResources `json:"resources,omitempty"`
+	Artifacts *Artifacts `json:"artifacts,omitempty"`
+	Params    []Param    `json:"params,omitempty"`
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName"`
 	// no more than one of the TaskRef and TaskSpec may be specified.
@@ -113,23 +112,6 @@ type TaskRunDebug struct {
 	// +optional
 	// +listType=atomic
 	Breakpoint []string `json:"breakpoint,omitempty"`
-}
-
-// TaskRunInputs holds the input values that this task was invoked with.
-type TaskRunInputs struct {
-	// +optional
-	// +listType=atomic
-	Resources []TaskResourceBinding `json:"resources,omitempty"`
-	// +optional
-	// +listType=atomic
-	Params []Param `json:"params,omitempty"`
-}
-
-// TaskRunOutputs holds the output values that this task was invoked with.
-type TaskRunOutputs struct {
-	// +optional
-	// +listType=atomic
-	Resources []TaskResourceBinding `json:"resources,omitempty"`
 }
 
 var taskRunCondSet = apis.NewBatchConditionSet()
@@ -251,9 +233,11 @@ type TaskRunStatusFields struct {
 	// +listType=atomic
 	Steps []StepState `json:"steps,omitempty"`
 
-	// Deprecated.
 	// CloudEvents describe the state of each cloud event requested via a
 	// CloudEventResource.
+	//
+	// Deprecated: Removed in v0.44.0.
+	//
 	// +optional
 	// +listType=atomic
 	CloudEvents []CloudEventDelivery `json:"cloudEvents,omitempty"`
@@ -274,6 +258,11 @@ type TaskRunStatusFields struct {
 	// +optional
 	// +listType=atomic
 	TaskRunResults []TaskRunResult `json:"taskResults,omitempty"`
+
+	// Artifacts are the list of results written out by the task's containers
+	// +optional
+	// +listType=atomic
+	Artifacts *Artifacts `json:"artifacts,omitempty"`
 
 	// The list has one entry per sidecar in the manifest. Each entry is
 	// represents the imageid of the corresponding sidecar.

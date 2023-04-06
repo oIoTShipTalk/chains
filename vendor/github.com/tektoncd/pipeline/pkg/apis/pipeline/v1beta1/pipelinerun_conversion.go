@@ -21,8 +21,6 @@ import (
 	"fmt"
 
 	v1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"github.com/tektoncd/pipeline/pkg/apis/version"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -36,9 +34,6 @@ func (pr *PipelineRun) ConvertTo(ctx context.Context, to apis.Convertible) error
 	switch sink := to.(type) {
 	case *v1.PipelineRun:
 		sink.ObjectMeta = pr.ObjectMeta
-		if err := serializePipelineRunResources(&sink.ObjectMeta, &pr.Spec); err != nil {
-			return err
-		}
 		if err := pr.Status.convertTo(ctx, &sink.Status); err != nil {
 			return err
 		}
@@ -60,6 +55,10 @@ func (prs PipelineRunSpec) ConvertTo(ctx context.Context, sink *v1.PipelineRunSp
 		if err != nil {
 			return err
 		}
+	}
+	if prs.Artifacts != nil {
+		sink.Artifacts = &v1.Artifacts{}
+		prs.Artifacts.convertTo(ctx, sink.Artifacts)
 	}
 	sink.Params = nil
 	for _, p := range prs.Params {
@@ -99,9 +98,6 @@ func (pr *PipelineRun) ConvertFrom(ctx context.Context, from apis.Convertible) e
 	switch source := from.(type) {
 	case *v1.PipelineRun:
 		pr.ObjectMeta = source.ObjectMeta
-		if err := deserializePipelineRunResources(&pr.ObjectMeta, &pr.Spec); err != nil {
-			return err
-		}
 		if err := pr.Status.convertFrom(ctx, &source.Status); err != nil {
 			return err
 		}
@@ -125,6 +121,11 @@ func (prs *PipelineRunSpec) ConvertFrom(ctx context.Context, source *v1.Pipeline
 			return err
 		}
 		prs.PipelineSpec = &newPipelineSpec
+	}
+	if source.Artifacts != nil {
+		newArtifacts := Artifacts{}
+		newArtifacts.convertFrom(ctx, source.Artifacts)
+		prs.Artifacts = &newArtifacts
 	}
 	prs.Params = nil
 	for _, p := range source.Params {
@@ -224,6 +225,12 @@ func (prs *PipelineRunStatus) convertTo(ctx context.Context, sink *v1.PipelineRu
 		pr.convertTo(ctx, &new)
 		sink.Results = append(sink.Results, new)
 	}
+
+	if prs.Artifacts != nil {
+		sink.Artifacts = &v1.Artifacts{}
+		prs.Artifacts.convertTo(ctx, sink.Artifacts)
+	}
+
 	if prs.PipelineSpec != nil {
 		sink.PipelineSpec = &v1.PipelineSpec{}
 		err := prs.PipelineSpec.ConvertTo(ctx, sink.PipelineSpec)
@@ -261,6 +268,11 @@ func (prs *PipelineRunStatus) convertFrom(ctx context.Context, source *v1.Pipeli
 		new := PipelineRunResult{}
 		new.convertFrom(ctx, pr)
 		prs.PipelineResults = append(prs.PipelineResults, new)
+	}
+	if source.Artifacts != nil {
+		newArtifacts := Artifacts{}
+		newArtifacts.convertFrom(ctx, source.Artifacts)
+		prs.Artifacts = &newArtifacts
 	}
 	if source.PipelineSpec != nil {
 		newPipelineSpec := PipelineSpec{}
@@ -350,23 +362,4 @@ func (csr *ChildStatusReference) convertFrom(ctx context.Context, source v1.Chil
 		new.convertFrom(ctx, we)
 		csr.WhenExpressions = append(csr.WhenExpressions, new)
 	}
-}
-
-func serializePipelineRunResources(meta *metav1.ObjectMeta, spec *PipelineRunSpec) error {
-	if spec.Resources == nil {
-		return nil
-	}
-	return version.SerializeToMetadata(meta, spec.Resources, resourcesAnnotationKey)
-}
-
-func deserializePipelineRunResources(meta *metav1.ObjectMeta, spec *PipelineRunSpec) error {
-	resources := []PipelineResourceBinding{}
-	err := version.DeserializeFromMetadata(meta, &resources, resourcesAnnotationKey)
-	if err != nil {
-		return err
-	}
-	if len(resources) != 0 {
-		spec.Resources = resources
-	}
-	return nil
 }

@@ -34,9 +34,9 @@ require (
 	google.golang.org/protobuf v1.30.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.25.4
-	k8s.io/code-generator v0.25.4
-	knative.dev/pkg v0.0.0-20230125083639-408ad0773f47
+	k8s.io/client-go v0.25.8
+	k8s.io/code-generator v0.25.8
+	knative.dev/pkg v0.0.0-20230221145627-8efb3485adcf
 )
 
 require (
@@ -382,7 +382,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/automaxprocs v1.5.1 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326 // indirect
+	golang.org/x/exp v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
@@ -425,3 +425,5 @@ require (
 // Replace glog to fix flag collision between klog and glog.
 // See https://github.com/sigstore/policy-controller/pull/112
 replace github.com/golang/glog => github.com/jdolitsky/glog v0.0.0-20220729172235-78744e90d087
+
+replace github.com/tektoncd/pipeline => github.com/chitrangpatel/pipeline v0.34.2-0.20230406161308-887ceca0551f

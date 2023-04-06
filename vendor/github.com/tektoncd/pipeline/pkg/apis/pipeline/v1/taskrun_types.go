@@ -37,7 +37,8 @@ type TaskRunSpec struct {
 	Debug *TaskRunDebug `json:"debug,omitempty"`
 	// +optional
 	// +listType=atomic
-	Params []Param `json:"params,omitempty"`
+	Artifacts *Artifacts `json:"artifacts,omitempty"`
+	Params    []Param    `json:"params,omitempty"`
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName"`
 	// no more than one of the TaskRef and TaskSpec may be specified.
@@ -228,6 +229,8 @@ type TaskRunStatusFields struct {
 	// +listType=atomic
 	Results []TaskRunResult `json:"results,omitempty"`
 
+	Artifacts *Artifacts `json:"artifacts,omitempty"`
+
 	// The list has one entry per sidecar in the manifest. Each entry is
 	// represents the imageid of the corresponding sidecar.
 	// +listType=atomic
@@ -239,6 +242,9 @@ type TaskRunStatusFields struct {
 	// Provenance contains some key authenticated metadata about how a software artifact was built (what sources, what inputs/outputs, etc.).
 	// +optional
 	Provenance *Provenance `json:"provenance,omitempty"`
+
+	// SpanContext contains tracing span context fields
+	SpanContext map[string]string `json:"spanContext,omitempty"`
 }
 
 // TaskRunStepSpec is used to override the values of a Step in the corresponding Task.
